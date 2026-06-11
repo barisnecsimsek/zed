@@ -786,6 +786,14 @@
       "ctrl-shift-tab": ["agents_sidebar::ToggleThreadSwitcher", { "select_last": true }],
     },
   },
+  // FORK-BEGIN(fork_thread_switcher_keybinds): keybinds for the fork's thread switcher modal. The `|| (...> Picker > Editor)` alternative is required so the binding fires while the filter editor has focus (otherwise the editor swallows shift-backspace at its leaf). See FORK.md.
+  {
+    "context": "ForkThreadSwitcher || (ForkThreadSwitcher > Picker > Editor)",
+    "bindings": {
+      "shift-backspace": "fork::ArchiveSelectedThread",
+    },
+  },
+  // FORK-END(fork_thread_switcher_keybinds)
   {
     "context": "Workspace && debugger_running",
     "use_key_equivalents": true,

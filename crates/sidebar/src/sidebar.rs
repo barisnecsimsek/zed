@@ -1,4 +1,6 @@
-mod thread_switcher;
+// FORK-BEGIN(switcher_reuse): expose the switcher entry types so the fork's thread switcher can reuse the sidebar's data pipeline. See FORK.md.
+pub mod thread_switcher;
+// FORK-END(switcher_reuse)
 
 use acp_thread::ThreadStatus;
 use action_log::DiffStats;
@@ -207,8 +209,10 @@ struct ActiveThreadInfo {
     diff_stats: DiffStats,
 }
 
+// FORK-BEGIN(switcher_reuse): private -> pub, reachable through the now-pub ThreadSwitcherSelection. See FORK.md.
 #[derive(Clone)]
-enum ThreadEntryWorkspace {
+pub enum ThreadEntryWorkspace {
+    // FORK-END(switcher_reuse)
     Open(Entity<Workspace>),
     Closed {
         /// The paths this entry uses (may point to linked worktrees).
@@ -5742,7 +5746,9 @@ impl Sidebar {
         sort_time(left).cmp(&sort_time(right)).reverse()
     }
 
-    fn mru_entries_for_switcher(&self, cx: &App) -> Vec<ThreadSwitcherEntry> {
+    // FORK-BEGIN(switcher_reuse): fn -> pub fn so the fork's thread switcher can consume the sidebar's entries. See FORK.md.
+    pub fn mru_entries_for_switcher(&self, cx: &App) -> Vec<ThreadSwitcherEntry> {
+        // FORK-END(switcher_reuse)
         let mut current_header_label: Option<SharedString> = None;
         let mut current_header_key: Option<ProjectGroupKey> = None;
         let mut entries: Vec<ThreadSwitcherEntry> = self
@@ -5895,12 +5901,14 @@ impl Sidebar {
         }
     }
 
-    fn confirm_switcher_selection(
+    // FORK-BEGIN(switcher_reuse): fn -> pub fn so the fork's thread switcher can reuse selection handling. See FORK.md.
+    pub fn confirm_switcher_selection(
         &mut self,
         selection: &ThreadSwitcherSelection,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        // FORK-END(switcher_reuse)
         match selection {
             ThreadSwitcherSelection::Thread {
                 metadata,

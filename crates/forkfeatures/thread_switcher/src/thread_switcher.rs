@@ -1,7 +1,6 @@
 mod thread_row;
 
 use std::collections::{BTreeMap, HashSet};
-use std::path::PathBuf;
 use std::sync::{Arc, atomic::AtomicBool};
 
 use agent_ui::thread_metadata_store::ThreadMetadataStore;
@@ -31,11 +30,7 @@ actions!(
         /// Archives the thread highlighted in the fork's thread switcher.
         ArchiveSelectedThread,
         /// Toggles the filter options menu in the fork's thread switcher footer.
-        ToggleFilterMenu,
-        /// Toggles whether archived threads are shown.
-        ToggleShowArchived,
-        /// Toggles whether only threads from the current workspace's worktrees are shown.
-        ToggleCurrentWorktreeOnly
+        ToggleFilterMenu
     ]
 );
 
@@ -90,19 +85,11 @@ impl ThreadSwitcher {
         else {
             return;
         };
-        let workspace_handle = cx.entity().downgrade();
-        workspace.toggle_modal(window, cx, |window, cx| {
-            ThreadSwitcher::new(sidebar, workspace_handle, window, cx)
-        });
+        workspace.toggle_modal(window, cx, |window, cx| ThreadSwitcher::new(sidebar, window, cx));
     }
 
-    fn new(
-        sidebar: Entity<Sidebar>,
-        workspace: WeakEntity<Workspace>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Self {
-        let delegate = ThreadSwitcherDelegate::new(sidebar.clone(), workspace, cx);
+    fn new(sidebar: Entity<Sidebar>, window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let delegate = ThreadSwitcherDelegate::new(sidebar.clone(), cx);
         let picker = cx.new(|cx| Picker::list(delegate, window, cx));
         let picker_focus_handle = picker.focus_handle(cx);
         picker.update(cx, |picker, _| {
@@ -167,19 +154,6 @@ impl ThreadSwitcher {
         });
     }
 
-    fn toggle_show_archived(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        self.picker.update(cx, |picker, cx| {
-            picker.delegate.show_archived = !picker.delegate.show_archived;
-            refresh_after_filter_change(picker, window, cx);
-        });
-    }
-
-    fn toggle_current_worktree_only(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        self.picker.update(cx, |picker, cx| {
-            picker.delegate.current_worktree_only = !picker.delegate.current_worktree_only;
-            refresh_after_filter_change(picker, window, cx);
-        });
-    }
 }
 
 fn refresh_after_filter_change(
@@ -192,14 +166,11 @@ fn refresh_after_filter_change(
     picker.update_matches(query, window, cx);
 }
 
-#[allow(clippy::too_many_arguments)]
 fn build_filter_menu(
     window: &mut Window,
     cx: &mut App,
     focus_handle: FocusHandle,
     picker_handle: WeakEntity<Picker<ThreadSwitcherDelegate>>,
-    show_archived: bool,
-    current_worktree_only: bool,
     enabled_statuses: Vec<AgentThreadStatus>,
     disabled_agents: HashSet<SharedString>,
     distinct_agents: Vec<SharedString>,
@@ -207,34 +178,6 @@ fn build_filter_menu(
     ContextMenu::build(window, cx, move |mut menu, _window, _cx| {
         menu = menu
             .context(focus_handle.clone())
-            .header("Filter Options")
-            .toggleable_entry(
-                "Show Archived",
-                show_archived,
-                IconPosition::End,
-                Some(ToggleShowArchived.boxed_clone()),
-                {
-                    let focus_handle = focus_handle.clone();
-                    move |window, cx| {
-                        window.focus(&focus_handle, cx);
-                        window.dispatch_action(ToggleShowArchived.boxed_clone(), cx);
-                    }
-                },
-            )
-            .toggleable_entry(
-                "Current Worktree Only",
-                current_worktree_only,
-                IconPosition::End,
-                Some(ToggleCurrentWorktreeOnly.boxed_clone()),
-                {
-                    let focus_handle = focus_handle.clone();
-                    move |window, cx| {
-                        window.focus(&focus_handle, cx);
-                        window.dispatch_action(ToggleCurrentWorktreeOnly.boxed_clone(), cx);
-                    }
-                },
-            )
-            .separator()
             .header("Status");
         for status in ALL_STATUSES {
             let toggled = enabled_statuses.contains(&status);
@@ -303,12 +246,6 @@ impl Render for ThreadSwitcher {
             .on_action(cx.listener(|this, _: &ToggleFilterMenu, window, cx| {
                 this.toggle_filter_menu(window, cx);
             }))
-            .on_action(cx.listener(|this, _: &ToggleShowArchived, window, cx| {
-                this.toggle_show_archived(window, cx);
-            }))
-            .on_action(cx.listener(|this, _: &ToggleCurrentWorktreeOnly, window, cx| {
-                this.toggle_current_worktree_only(window, cx);
-            }))
             .child(self.picker.clone())
     }
 }
@@ -346,7 +283,6 @@ struct EntryMatch {
 
 pub struct ThreadSwitcherDelegate {
     sidebar: Entity<Sidebar>,
-    workspace: WeakEntity<Workspace>,
     entries: Vec<ThreadSwitcherEntry>,
     title_candidates: Vec<StringMatchCandidate>,
     worktree_candidates: Vec<StringMatchCandidate>,
@@ -356,21 +292,14 @@ pub struct ThreadSwitcherDelegate {
     previous_query: String,
     focus_handle: FocusHandle,
     filter_popover_menu_handle: PopoverMenuHandle<ContextMenu>,
-    show_archived: bool,
-    current_worktree_only: bool,
     enabled_statuses: Vec<AgentThreadStatus>,
     disabled_agents: HashSet<SharedString>,
 }
 
 impl ThreadSwitcherDelegate {
-    fn new(
-        sidebar: Entity<Sidebar>,
-        workspace: WeakEntity<Workspace>,
-        cx: &mut Context<ThreadSwitcher>,
-    ) -> Self {
+    fn new(sidebar: Entity<Sidebar>, cx: &mut Context<ThreadSwitcher>) -> Self {
         Self {
             sidebar,
-            workspace,
             entries: Vec::new(),
             title_candidates: Vec::new(),
             worktree_candidates: Vec::new(),
@@ -380,8 +309,6 @@ impl ThreadSwitcherDelegate {
             previous_query: String::new(),
             focus_handle: cx.focus_handle(),
             filter_popover_menu_handle: PopoverMenuHandle::default(),
-            show_archived: false,
-            current_worktree_only: false,
             enabled_statuses: ALL_STATUSES.to_vec(),
             disabled_agents: HashSet::new(),
         }
@@ -439,13 +366,11 @@ impl ThreadSwitcherDelegate {
         self.entries.get(mat.entry_index).map(|e| e.element_id())
     }
 
-    fn apply_filters(&self, entries: &mut Vec<ThreadSwitcherEntry>, cx: &App) {
-        if !self.show_archived {
-            entries.retain(|e| match e.selection() {
-                ThreadSwitcherSelection::Thread { metadata, .. } => !metadata.archived,
-                ThreadSwitcherSelection::Terminal { .. } => true,
-            });
-        }
+    fn apply_filters(&self, entries: &mut Vec<ThreadSwitcherEntry>, _cx: &App) {
+        entries.retain(|e| match e.selection() {
+            ThreadSwitcherSelection::Thread { metadata, .. } => !metadata.archived,
+            ThreadSwitcherSelection::Terminal { .. } => true,
+        });
         if !self.enabled_statuses.is_empty() && self.enabled_statuses.len() < ALL_STATUSES.len() {
             entries.retain(|e| self.enabled_statuses.iter().any(|s| *s == e.status()));
         }
@@ -457,28 +382,6 @@ impl ThreadSwitcherDelegate {
                 }
                 ThreadSwitcherSelection::Terminal { .. } => true,
             });
-        }
-        if self.current_worktree_only {
-            let active_paths = self
-                .workspace
-                .upgrade()
-                .map(|ws| {
-                    ws.read(cx)
-                        .project()
-                        .read(cx)
-                        .visible_worktrees(cx)
-                        .map(|wt| wt.read(cx).abs_path().to_path_buf())
-                        .collect::<HashSet<PathBuf>>()
-                })
-                .unwrap_or_default();
-            if !active_paths.is_empty() {
-                entries.retain(|e| {
-                    e.worktrees().iter().any(|wt| {
-                        let path = PathBuf::from(wt.full_path.as_ref());
-                        active_paths.contains(&path)
-                    })
-                });
-            }
         }
     }
 
@@ -665,15 +568,11 @@ impl PickerDelegate for ThreadSwitcherDelegate {
         cx: &mut Context<Picker<Self>>,
     ) -> Option<AnyElement> {
         let focus_handle = self.focus_handle.clone();
-        let show_archived = self.show_archived;
-        let current_worktree_only = self.current_worktree_only;
         let enabled_statuses = self.enabled_statuses.clone();
         let disabled_agents = self.disabled_agents.clone();
         let distinct_agents = self.distinct_agents();
-        let any_filter_active = show_archived
-            || current_worktree_only
-            || enabled_statuses.len() < ALL_STATUSES.len()
-            || !disabled_agents.is_empty();
+        let any_filter_active =
+            enabled_statuses.len() < ALL_STATUSES.len() || !disabled_agents.is_empty();
         let picker_handle = cx.entity().downgrade();
 
         Some(
@@ -719,8 +618,6 @@ impl PickerDelegate for ThreadSwitcherDelegate {
                                     cx,
                                     focus_handle.clone(),
                                     picker_handle.clone(),
-                                    show_archived,
-                                    current_worktree_only,
                                     enabled_statuses.clone(),
                                     disabled_agents.clone(),
                                     distinct_agents.clone(),

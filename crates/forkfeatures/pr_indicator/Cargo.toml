@@ -1,0 +1,29 @@
+[package]
+name = "pr_indicator"
+version = "0.1.0"
+edition.workspace = true
+publish.workspace = true
+license = "GPL-3.0-or-later"
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/pr_indicator.rs"
+doctest = false
+
+[dependencies]
+anyhow.workspace = true
+command_palette_hooks.workspace = true
+futures.workspace = true
+gpui.workspace = true
+http_client.workspace = true
+log.workspace = true
+project.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+smol.workspace = true
+title_bar.workspace = true
+ui.workspace = true
+util.workspace = true
+workspace.workspace = true

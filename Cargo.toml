@@ -80,6 +80,7 @@ members = [
     "crates/file_finder",
     "crates/file_icons",
     "crates/fork_integration",
+    "crates/forkfeatures/pr_indicator",
     "crates/forkfeatures/thread_switcher",
     "crates/fs",
     "crates/fs_benchmarks",
@@ -466,6 +467,7 @@ theme = { path = "crates/theme" }
 theme_extension = { path = "crates/theme_extension" }
 theme_settings = { path = "crates/theme_settings" }
 theme_selector = { path = "crates/theme_selector" }
+pr_indicator = { path = "crates/forkfeatures/pr_indicator" }
 thread_switcher = { path = "crates/forkfeatures/thread_switcher" }
 time_format = { path = "crates/time_format" }
 platform_title_bar = { path = "crates/platform_title_bar" }

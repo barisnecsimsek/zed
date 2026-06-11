@@ -6798,6 +6798,7 @@ name = "fork_integration"
 version = "0.1.0"
 dependencies = [
  "gpui",
+ "pr_indicator",
  "thread_switcher",
 ]
 
@@ -13728,6 +13729,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9"
 dependencies = [
  "zerocopy",
+]
+
+[[package]]
+name = "pr_indicator"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "command_palette_hooks",
+ "futures 0.3.32",
+ "gpui",
+ "http_client",
+ "log",
+ "project",
+ "serde",
+ "serde_json",
+ "smol",
+ "title_bar",
+ "ui",
+ "util",
+ "workspace",
 ]
 
 [[package]]

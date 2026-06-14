@@ -60,6 +60,46 @@ use zed_actions::OpenRemote;
 
 pub use onboarding_banner::restore_banner;
 
+// FORK-BEGIN(pr_indicator_titlebar_extra)
+/// A renderer that returns an extra element to be appended after the branch
+/// chip in the title bar (e.g. the fork's PR indicator). The renderer is
+/// invoked on each `render_worktree_and_branch` pass with the currently
+/// displayed repository.
+pub type ExtraBranchChipRenderer = std::sync::Arc<
+    dyn Fn(
+            &Entity<project::git_store::Repository>,
+            &mut Window,
+            &mut App,
+        ) -> Option<AnyElement>
+        + Send
+        + Sync,
+>;
+
+#[derive(Default)]
+pub struct ExtraBranchChip {
+    renderer: Option<ExtraBranchChipRenderer>,
+}
+
+impl gpui::Global for ExtraBranchChip {}
+
+impl ExtraBranchChip {
+    pub fn set_renderer(renderer: ExtraBranchChipRenderer, cx: &mut App) {
+        cx.set_global(ExtraBranchChip {
+            renderer: Some(renderer),
+        });
+    }
+
+    /// Bump the global so every observing `TitleBar` re-renders. Called by
+    /// the fork's feature crates whenever their cached state changes.
+    pub fn notify_changed(cx: &mut App) {
+        if !cx.has_global::<ExtraBranchChip>() {
+            cx.set_global(ExtraBranchChip::default());
+        }
+        cx.update_global::<ExtraBranchChip, _>(|_, _| {});
+    }
+}
+// FORK-END(pr_indicator_titlebar_extra)
+
 const MAX_PROJECT_NAME_LENGTH: usize = 40;
 const MAX_BRANCH_NAME_LENGTH: usize = 40;
 const MAX_SHORT_SHA_LENGTH: usize = 8;
@@ -314,6 +354,7 @@ impl Render for TitleBar {
                                         title_bar.children(self.render_worktree_and_branch(
                                             repository,
                                             linked_worktree_name,
+                                            window,
                                             cx,
                                         ))
                                     },
@@ -486,6 +527,12 @@ impl TitleBar {
             ));
         }
         subscriptions.push(cx.observe_button_layout_changed(window, |_, _, cx| cx.notify()));
+        // FORK-BEGIN(pr_indicator_titlebar_extra)
+        if !cx.has_global::<ExtraBranchChip>() {
+            cx.set_global(ExtraBranchChip::default());
+        }
+        subscriptions.push(cx.observe_global::<ExtraBranchChip>(|_, cx| cx.notify()));
+        // FORK-END(pr_indicator_titlebar_extra)
         if let Some(trusted_worktrees) = TrustedWorktrees::try_get_global(cx) {
             subscriptions.push(cx.subscribe(&trusted_worktrees, |_, _, _, cx| {
                 cx.notify();
@@ -893,6 +940,7 @@ impl TitleBar {
         &self,
         repository: Entity<project::git_store::Repository>,
         linked_worktree_name: Option<SharedString>,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
         let workspace = self.workspace.upgrade()?;
@@ -934,7 +982,13 @@ impl TitleBar {
             (branch_name, icon_info, is_detached_head)
         };
 
-        let settings = TitleBarSettings::get_global(cx);
+        let settings = *TitleBarSettings::get_global(cx);
+        // FORK-BEGIN(pr_indicator_titlebar_extra)
+        let extra_renderer = cx
+            .try_global::<ExtraBranchChip>()
+            .and_then(|chip| chip.renderer.clone());
+        let extra_chip = extra_renderer.and_then(|renderer| renderer(&repository, window, cx));
+        // FORK-END(pr_indicator_titlebar_extra)
         let effective_repository = Some(repository);
 
         let worktree_label: SharedString = linked_worktree_name.unwrap_or_else(|| "main".into());
@@ -1065,6 +1119,9 @@ impl TitleBar {
                     )
                     .child(branch_picker)
                 })
+                // FORK-BEGIN(pr_indicator_titlebar_extra)
+                .when_some(extra_chip, |this, extra_chip| this.child(extra_chip))
+                // FORK-END(pr_indicator_titlebar_extra)
                 .into_any_element(),
         )
     }

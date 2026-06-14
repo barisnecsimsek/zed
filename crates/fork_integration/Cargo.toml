@@ -14,4 +14,5 @@ doctest = false
 
 [dependencies]
 gpui.workspace = true
+pr_indicator.workspace = true
 thread_switcher.workspace = true

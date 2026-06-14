@@ -79,6 +79,8 @@ members = [
     "crates/feedback",
     "crates/file_finder",
     "crates/file_icons",
+    "crates/fork_integration",
+    "crates/forkfeatures/thread_switcher",
     "crates/fs",
     "crates/fs_benchmarks",
     "crates/fuzzy",
@@ -334,6 +336,7 @@ feature_flags_macros = { path = "crates/feature_flags_macros" }
 feedback = { path = "crates/feedback" }
 file_finder = { path = "crates/file_finder" }
 file_icons = { path = "crates/file_icons" }
+fork_integration = { path = "crates/fork_integration" }
 fs = { path = "crates/fs" }
 fuzzy = { path = "crates/fuzzy" }
 fuzzy_nucleo = { path = "crates/fuzzy_nucleo" }
@@ -346,7 +349,9 @@ grammars = { path = "crates/grammars" }
 gpui = { path = "crates/gpui", default-features = false }
 gpui_shared_string = { path = "crates/gpui_shared_string" }
 gpui_linux = { path = "crates/gpui_linux", default-features = false }
-gpui_macos = { path = "crates/gpui_macos", default-features = false }
+# FORK-BEGIN(metal_shaders_runtime): force runtime_shaders so devs without full Xcode can build (`xcrun metal` ships only with the Xcode IDE). Tradeoff is a one-time shader compilation at app startup. See FORK.md.
+gpui_macos = { path = "crates/gpui_macos", default-features = false, features = ["runtime_shaders"] }
+# FORK-END(metal_shaders_runtime)
 gpui_macros = { path = "crates/gpui_macros" }
 gpui_platform = { path = "crates/gpui_platform", default-features = false }
 gpui_web = { path = "crates/gpui_web" }
@@ -461,6 +466,7 @@ theme = { path = "crates/theme" }
 theme_extension = { path = "crates/theme_extension" }
 theme_settings = { path = "crates/theme_settings" }
 theme_selector = { path = "crates/theme_selector" }
+thread_switcher = { path = "crates/forkfeatures/thread_switcher" }
 time_format = { path = "crates/time_format" }
 platform_title_bar = { path = "crates/platform_title_bar" }
 title_bar = { path = "crates/title_bar" }

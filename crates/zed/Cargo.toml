@@ -110,6 +110,9 @@ extensions_ui.workspace = true
 feature_flags.workspace = true
 feedback.workspace = true
 file_finder.workspace = true
+# FORK-BEGIN(integration_dep): pull our integration shim into the binary so init() runs. See FORK.md.
+fork_integration.workspace = true
+# FORK-END(integration_dep)
 fs.workspace = true
 futures.workspace = true
 git.workspace = true

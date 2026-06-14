@@ -14,8 +14,9 @@ use zed_actions::agents_sidebar::ToggleThreadSwitcher;
 
 use super::ThreadEntryWorkspace;
 
+// FORK-BEGIN(switcher_reuse): pub(crate)/pub(super) -> pub on entry types + accessors, consumed by the fork's thread switcher. See FORK.md.
 #[derive(Clone)]
-pub(crate) struct ThreadSwitcherThreadEntry {
+pub struct ThreadSwitcherThreadEntry {
     pub title: SharedString,
     pub icon: IconName,
     pub icon_from_external_svg: Option<SharedString>,
@@ -32,7 +33,7 @@ pub(crate) struct ThreadSwitcherThreadEntry {
 }
 
 #[derive(Clone)]
-pub(crate) struct ThreadSwitcherTerminalEntry {
+pub struct ThreadSwitcherTerminalEntry {
     pub metadata: TerminalThreadMetadata,
     pub(super) workspace: ThreadEntryWorkspace,
     pub project_name: Option<SharedString>,
@@ -42,13 +43,13 @@ pub(crate) struct ThreadSwitcherTerminalEntry {
 }
 
 #[derive(Clone)]
-pub(crate) enum ThreadSwitcherEntry {
+pub enum ThreadSwitcherEntry {
     Thread(ThreadSwitcherThreadEntry),
     Terminal(ThreadSwitcherTerminalEntry),
 }
 
 #[derive(Clone)]
-pub(super) enum ThreadSwitcherSelection {
+pub enum ThreadSwitcherSelection {
     Thread {
         metadata: ThreadMetadata,
         workspace: Entity<Workspace>,
@@ -60,7 +61,7 @@ pub(super) enum ThreadSwitcherSelection {
 }
 
 impl ThreadSwitcherEntry {
-    pub(super) fn selection(&self) -> ThreadSwitcherSelection {
+    pub fn selection(&self) -> ThreadSwitcherSelection {
         match self {
             Self::Thread(entry) => ThreadSwitcherSelection::Thread {
                 metadata: entry.metadata.clone(),
@@ -73,7 +74,7 @@ impl ThreadSwitcherEntry {
         }
     }
 
-    fn element_id(&self) -> SharedString {
+    pub fn element_id(&self) -> SharedString {
         match self {
             Self::Thread(entry) => SharedString::from(format!(
                 "thread-switcher-thread-{:?}",
@@ -86,14 +87,14 @@ impl ThreadSwitcherEntry {
         }
     }
 
-    fn title(&self) -> SharedString {
+    pub fn title(&self) -> SharedString {
         match self {
             Self::Thread(entry) => entry.title.clone(),
             Self::Terminal(entry) => entry.metadata.display_title(),
         }
     }
 
-    fn icon(&self) -> IconName {
+    pub fn icon(&self) -> IconName {
         match self {
             Self::Thread(entry) if entry.is_draft => IconName::Circle,
             Self::Thread(entry) => entry.icon,
@@ -101,7 +102,7 @@ impl ThreadSwitcherEntry {
         }
     }
 
-    fn icon_from_external_svg(&self) -> Option<SharedString> {
+    pub fn icon_from_external_svg(&self) -> Option<SharedString> {
         match self {
             Self::Thread(entry) if entry.is_draft => None,
             Self::Thread(entry) => entry.icon_from_external_svg.clone(),
@@ -109,61 +110,62 @@ impl ThreadSwitcherEntry {
         }
     }
 
-    fn status(&self) -> AgentThreadStatus {
+    pub fn status(&self) -> AgentThreadStatus {
         match self {
             Self::Thread(entry) => entry.status,
             Self::Terminal(_) => AgentThreadStatus::default(),
         }
     }
 
-    fn project_name(&self) -> Option<SharedString> {
+    pub fn project_name(&self) -> Option<SharedString> {
         match self {
             Self::Thread(entry) => entry.project_name.clone(),
             Self::Terminal(entry) => entry.project_name.clone(),
         }
     }
 
-    fn worktrees(&self) -> Vec<ThreadItemWorktreeInfo> {
+    pub fn worktrees(&self) -> Vec<ThreadItemWorktreeInfo> {
         match self {
             Self::Thread(entry) => entry.worktrees.clone(),
             Self::Terminal(entry) => entry.worktrees.clone(),
         }
     }
 
-    fn timestamp(&self) -> SharedString {
+    pub fn timestamp(&self) -> SharedString {
         match self {
             Self::Thread(entry) => entry.timestamp.clone(),
             Self::Terminal(entry) => entry.timestamp.clone(),
         }
     }
 
-    fn is_draft(&self) -> bool {
+    pub fn is_draft(&self) -> bool {
         match self {
             Self::Thread(entry) => entry.is_draft,
             Self::Terminal(_) => false,
         }
     }
 
-    fn is_title_generating(&self) -> bool {
+    pub fn is_title_generating(&self) -> bool {
         match self {
             Self::Thread(entry) => entry.is_title_generating,
             Self::Terminal(_) => false,
         }
     }
 
-    fn notified(&self) -> bool {
+    pub fn notified(&self) -> bool {
         match self {
             Self::Thread(entry) => entry.notified,
             Self::Terminal(entry) => entry.notified,
         }
     }
 
-    fn diff_stats(&self) -> DiffStats {
+    pub fn diff_stats(&self) -> DiffStats {
         match self {
             Self::Thread(entry) => entry.diff_stats,
             Self::Terminal(_) => DiffStats::default(),
         }
     }
+    // FORK-END(switcher_reuse)
 
     #[cfg(test)]
     pub fn thread_id(&self) -> Option<agent_ui::ThreadId> {

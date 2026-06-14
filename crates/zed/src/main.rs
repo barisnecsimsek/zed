@@ -742,6 +742,9 @@ fn main() {
         outline_panel::init(cx);
         tasks_ui::init(cx);
         snippets_ui::init(cx);
+        // FORK-BEGIN(integration_init): wire our first-party fork features. Keep this LAST so all upstream registrations are visible. See FORK.md.
+        fork_integration::init(cx);
+        // FORK-END(integration_init)
         channel::init(&app_state.client.clone(), app_state.user_store.clone(), cx);
         search::init(cx);
         cx.set_global(workspace::PaneSearchBarCallbacks {
